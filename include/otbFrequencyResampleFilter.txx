@@ -92,11 +92,13 @@ void FrequencyResampleFilter<TInputImage,
           input_ptr->GetLargestPossibleRegion().GetIndex());
 
     output_ptr->SetLargestPossibleRegion(output_largest_reg);
-    // TODO ME
-    // check spacing
+
+    auto spacing = input_ptr->GetSignedSpacing();
     output_ptr->SetSignedSpacing(
-          input_ptr->GetSignedSpacing() * zoom_ratio_.output_resolution() /
+          spacing * zoom_ratio_.output_resolution() /
           static_cast<double>(zoom_ratio_.input_resolution()));
+
+    // no need to move origin since otb works with centered pixels
 }
 
 template <class TInputImage, class TOutputImage>

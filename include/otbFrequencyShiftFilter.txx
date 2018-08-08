@@ -86,6 +86,7 @@ void FrequencyShiftFilter<TInputImage,
 
     output_ptr->SetLargestPossibleRegion(output_largest_reg);
     // by default spacing will be the same as input one
+    // no need to move origin since otb works with centered pixels
 }
 
 template <class TInputImage, class TOutputImage>
