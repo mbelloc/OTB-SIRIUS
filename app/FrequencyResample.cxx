@@ -30,6 +30,7 @@
 #include "otbWrapperApplicationFactory.h"
 
 #include "otbFrequencyResampleFilter.h"
+#include "otbFrequencyShiftFilter.h"
 
 namespace otb {
 namespace Wrapper {
@@ -37,6 +38,7 @@ namespace Wrapper {
 class FrequencyResample : public Application {
   private:
     typedef otb::FrequencyResampleFilter<DoubleImageType> FilterType;
+    typedef otb::FrequencyShiftFilter<DoubleImageType> ShiftFilterType;
 
   public:
     typedef FrequencyResample Self;
@@ -125,6 +127,17 @@ class FrequencyResample : public Application {
                                sirius::filter_default_hot_point.y);
         MandatoryOff("filter.hotpoint.y");
 
+        // translation
+        AddParameter(ParameterType_Group, "translation", "translation options");
+        AddParameter(ParameterType_Float, "translation.rowshift",
+                     "Desired translation on y axis");
+        SetDefaultParameterInt("translation.rowshift", 0.0);
+        MandatoryOff("translation.rowshift");
+        AddParameter(ParameterType_Float, "translation.colshift",
+                     "Desired translation on x axis");
+        SetDefaultParameterInt("translation.colshift", 0.0);
+        MandatoryOff("translation.colshift");
+
         // upsampling
         SetDocExampleParameterValue("in", "lena.jpg");
         SetDocExampleParameterValue("out", "lena_z2.jpg");
@@ -135,6 +148,7 @@ class FrequencyResample : public Application {
 
     void DoExecute() override {
         filter_ = FilterType::New();
+        shift_filter_ = ShiftFilterType::New();
 
         // sirius verbosity
         std::string verbosity = GetParameterAsString("v");
@@ -160,6 +174,36 @@ class FrequencyResample : public Application {
         hotpoint.x = GetParameterInt("filter.hotpoint.x");
         hotpoint.y = GetParameterInt("filter.hotpoint.y");
 
+        // translation
+        auto row_shift = GetParameterFloat("translation.rowshift");
+        auto col_shift = GetParameterFloat("translation.colshift");
+
+        // image decomposition parameters
+        sirius::ImageDecompositionPolicies image_decomposition_policy =
+              sirius::ImageDecompositionPolicies::kPeriodicSmooth;
+        sirius::FrequencyZoomStrategies zoom_strategy =
+              sirius::FrequencyZoomStrategies::kPeriodization;
+
+        if (no_image_decomposition) {
+            LOG("sirius", info, "image decomposition: none");
+            image_decomposition_policy =
+                  sirius::ImageDecompositionPolicies::kRegular;
+        } else {
+            LOG("sirius", info, "image decomposition: periodic plus smooth");
+        }
+
+        // Only execute the translation if shift parameters are set up
+        if (row_shift != 0.0 || col_shift != 0.0) {
+            LOG("sirius", info, "translation mode");
+            shift_filter_->Init(image_decomposition_policy, row_shift,
+                                col_shift);
+            shift_filter_->SetInput(GetParameterDoubleImage("in"));
+            SetParameterOutputImage("out", shift_filter_->GetOutput());
+            return;
+        }
+
+        LOG("sirius", info, "Resampling mode");
+
         sirius::PaddingType padding_type = sirius::PaddingType::kMirrorPadding;
         if (zero_pad_real_edges) {
             padding_type = sirius::PaddingType::kZeroPadding;
@@ -175,19 +219,6 @@ class FrequencyResample : public Application {
         }
 
         // resampling parameters
-        sirius::ImageDecompositionPolicies image_decomposition_policy =
-              sirius::ImageDecompositionPolicies::kPeriodicSmooth;
-        sirius::FrequencyZoomStrategies zoom_strategy =
-              sirius::FrequencyZoomStrategies::kPeriodization;
-
-        if (no_image_decomposition) {
-            LOG("sirius", info, "image decomposition: none");
-            image_decomposition_policy =
-                  sirius::ImageDecompositionPolicies::kRegular;
-        } else {
-            LOG("sirius", info, "image decomposition: periodic plus smooth");
-        }
-
         if (zoom_ratio.ratio() > 1) {
             // choose the upsampling algorithm only if ratio > 1
             if (force_upsample_periodization && !frequency_filter.IsLoaded()) {
@@ -217,6 +248,7 @@ class FrequencyResample : public Application {
 
   private:
     FilterType::Pointer filter_;
+    ShiftFilterType::Pointer shift_filter_;
 };
 
 }  // namespace Wrapper

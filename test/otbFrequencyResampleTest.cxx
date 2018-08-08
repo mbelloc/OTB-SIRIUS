@@ -20,11 +20,19 @@
  */
 
 #include "otbFrequencyResampleFilter.h"
+#include "otbFrequencyShiftFilter.h"
 
 int FrequencyResampleNew(int, char**) {
     using DoublePixelType = double;
     auto filter =
           otb::FrequencyResampleFilter<otb::Image<DoublePixelType>>::New();
+
+    return 0;
+}
+
+int FrequencyShiftNew(int, char**) {
+    using DoublePixelType = double;
+    auto filter = otb::FrequencyShiftFilter<otb::Image<DoublePixelType>>::New();
 
     return 0;
 }

@@ -20,4 +20,7 @@
  */
 
 #include "otbTestMain.h"
-void RegisterTests() { REGISTER_TEST(FrequencyResampleNew); }
+void RegisterTests() {
+    REGISTER_TEST(FrequencyResampleNew);
+    REGISTER_TEST(FrequencyShiftNew);
+}
